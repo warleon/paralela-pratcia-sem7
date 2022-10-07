@@ -1,50 +1,78 @@
 #include <omp.h>
-
 #include <cmath>
 #include <iostream>
 
-#define N 8
+#define N 10000
+#define THREADS 8
+double A[N][N]; // move it here to prevent segfault
 
-void normaliza(double A[N][N]) {
+void normaliza(double A[N][N])
+{
   double suma = 0.0, factor;
-#pragma omp parallel for reduction(+ : suma)
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
+#pragma omp parallel for /*collapse(2)*/ reduction(+ \
+                                                   : suma)
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < N; j++)
+    {
       suma += A[i][j] * A[i][j];
     }
   }
   factor = 1.0 / sqrt(suma);
-#pragma omp parallel for
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
+#pragma omp parallel for /*collapse(2)*/
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < N; j++)
+    {
       A[i][j] = factor * A[i][j];
     }
   }
 }
 
-int main() {
-  double A[N][N];
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
+int main()
+{
+  double t1, t2;
+  omp_set_num_threads(THREADS);
+
+  // set initial matrix
+
+  for (int i = 0; i < N; i++)
+  {
+    for (int j = 0; j < N; j++)
+    {
       A[i][j] = (double)rand();
     }
   }
 
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
-      std::cout << A[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
+  // print initial matrix
+
+  // for (int i = 0; i < N; i++)
+  // {
+  //   for (int j = 0; j < N; j++)
+  //   {
+  //     std::cout << A[i][j] << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+
   std::cout
       << "----------------------------------------------------------------\n";
-  normaliza(A);
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
-      std::cout << A[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
 
+  t1 = omp_get_wtime();
+  normaliza(A);
+  t2 = omp_get_wtime();
+
+  // print normalized matrix
+
+  // for (int i = 0; i < N; i++)
+  // {
+  //   for (int j = 0; j < N; j++)
+  //   {
+  //     std::cout << A[i][j] << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+
+  printf("tiempo: %f8s\n", (t2 - t1));
   return 0;
 }
