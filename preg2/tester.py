@@ -1,8 +1,8 @@
 from subprocess import Popen, PIPE
 
-N = 106
+N = 100000
 pr = 8
-iterations = 100
+iterations = 1
 program_path = "./a.out"
 
 print("\nUsing N:", N)

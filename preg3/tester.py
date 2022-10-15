@@ -1,6 +1,6 @@
 from subprocess import Popen, PIPE
 
-N = 106
+N = 2**6
 pr = 8
 iterations = 100
 program_path = "./a.out"
@@ -9,7 +9,7 @@ print("\nUsing N:", N)
 print("   processors", "  |\t","average(s)")
 print("-------------------------------------")
 
-for pr_i in range(1,9):
+for pr_i in range(1,pr+1):
   avg = 0
   for i in range(iterations):
     p = Popen([program_path], shell=True, stdout=PIPE, stdin=PIPE)

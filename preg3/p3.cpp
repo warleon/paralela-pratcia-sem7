@@ -63,14 +63,14 @@ void qs(double *z, int zstart, int zend)
 
 void pqs(double *z, int zend)
 {
-#pragma omp parallel
-  {
-#pragma omp single
-    {
+// #pragma omp parallel
+//   {
+// #pragma omp single
+//     {
       qs(z, 0, zend - 1);
       // printf("finished pqs in %i\n",omp_get_thread_num());
-    }
-  }
+  //   }
+  // }
 }
 
 void suma_de_prefijos(double *A, int n)
@@ -163,9 +163,8 @@ void scan_left(double *C, int n, double &x)
 
 double multMod(double *A, double *B, int n)
 {
-  // printf("hilo en multmod: %i\n",
-  //       omp_get_thread_num());
-
+  printf("hilo en multmod: %i\n",
+        omp_get_thread_num());
   double s1;
   for (int i = 0; i < n; i++)
   { 
@@ -179,7 +178,7 @@ double multMod(double *A, double *B, int n)
     // debido a necesitar s1 completo.
     // printf("s_in:%f, it: %d\n",s1 , i);
 
-  #pragma omp parallel for
+  #pragma omp parallel for 
     for (int j = 0; j < n; j++)
       A[j] += (log10(s1));
   }
@@ -192,38 +191,75 @@ double OpArr(double A[], double B[], double C[], int n)
   int i, j;
   double s1, s2, a, res;
   double x = 1.0;
-  #pragma omp parallel
+  #pragma omp parallel default(shared)
   {
     #pragma omp single nowait
     {
+      
       #pragma omp task depend(out:A)
         suma_de_prefijos(A, n); // obtiene el array de suma de prefijos de A
       #pragma omp task depend(out:B)
         pqs(B, n); // ordena el array B
       #pragma omp task depend(out:C)
         scan_left(C, n, x); // acumula los valores de elementos de C mas una constante x
+      
+      #pragma omp task depend(in:A,B) depend(out:s1)
+          s1 = multMod(A, B, n);
+      #pragma omp task depend(in:C,B) depend(out:s2)
+          s2 = multMod(C, B, n);
 
-      #pragma omp task depend(in:A,B)
-        s1 = multMod(A, B, n);
-      #pragma omp task depend(in:C,B)
-        s2 = multMod(C, B, n);
+      #pragma omp task depend(in:s1,s2) depend(out:a)
+      {
+        a = s1 / s2;
+      }
+      
+      #pragma omp task depend(in:a)
+      {
+        res = 0;
+        #pragma omp parallel for reduction(+ \
+                                          : res)
+        for (int i = 0; i < n; i++){
+          res += a + C[i];
+        }
+      }
+
     }
-  }
-  /* calculo final */
-  // printf("s1:%f\ns2:%f\n", s1,s2);
-
-  a = s1 / s2;
-
-  // printf("a:%f\n",a);
-
-  res = 0;
-  #pragma omp parallel for reduction(+ \
-                                    : res)
-  for (int i = 0; i < n; i++){
-    res += a + C[i];
   }
   return res;
 }
+
+// double OpArr(double A[], double B[], double C[], int n)
+// {
+//   int i, j;
+//   double s1, s2, a, res;
+//   double x = 1.0;
+//   #pragma omp parallel default(shared)
+//   {
+//     #pragma omp single nowait
+//     {
+      
+//       #pragma omp task depend(out:A)
+//         suma_de_prefijos(A, n); // obtiene el array de suma de prefijos de A
+//       #pragma omp task depend(out:B)
+//         pqs(B, n); // ordena el array B
+//       #pragma omp task depend(out:C)
+//         scan_left(C, n, x); // acumula los valores de elementos de C mas una constante x
+      
+//     }
+//   }
+//   s1 = multMod(A, B, n);
+//   s2 = multMod(C, B, n);
+
+//   a = s1 / s2;
+//   res = 0;
+//   #pragma omp parallel for reduction(+ \
+//                                           : res)
+//   for (int i = 0; i < n; i++){
+//     res += a + C[i];
+//   }
+
+//   return res;
+// }
 
 int main()
 {
@@ -234,7 +270,6 @@ int main()
   omp_set_dynamic(0);
   double t1, t2;
 
-  // const int n = 1 << 14;
   const int n = N;
 
   double a[n], b[n], c[n];
@@ -247,11 +282,21 @@ int main()
   }
 
   t1 = omp_get_wtime();
-  double result = OpArr(a, b, c, n);  
+  double result = OpArr(a, b, c, n); 
+  //   #pragma omp parallel default(shared)
+  // {
+  //   #pragma omp single 
+  //   {
+          // multMod(a, b, n);
+  //   }
+  // }
+
+  // double result = multMod(a, b, n);  
   t2 = omp_get_wtime();
 
-  printf("result: %f\n", result);
+  // printf("result: %f\n", result);
   printf("%f8", (t2 - t1));
+
 
   // for (int i = 0; i < n; i++)
   // {
